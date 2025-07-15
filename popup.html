@@ -103,15 +103,69 @@
       .date-picker {
         display: flex;
         flex-direction: column;
-        gap: 10px;
-        margin-top: 10px;
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      .date-picker label {
+        font-size: 13px;
+        color: #666;
+        font-weight: 500;
+        margin-bottom: 4px;
+        display: block;
       }
 
       .date-picker input[type='datetime-local'] {
-        padding: 8px;
+        padding: 12px 16px;
         border: 1px solid #ddd;
-        border-radius: 6px;
+        border-radius: 8px;
         font-size: 14px;
+        background: #fff;
+        color: #333;
+        width: 100%;
+        box-sizing: border-box;
+        transition: all 0.2s;
+        font-family: inherit;
+      }
+
+      .date-picker input[type='datetime-local']:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+      }
+
+      .date-picker input[type='datetime-local']:hover {
+        border-color: #007bff;
+      }
+
+      /* Improve the native datepicker button */
+      .date-picker input[type='datetime-local']::-webkit-calendar-picker-indicator {
+        background: transparent;
+        color: #666;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        transition: all 0.2s;
+      }
+
+      .date-picker input[type='datetime-local']::-webkit-calendar-picker-indicator:hover {
+        background: #f0f0f0;
+      }
+
+      .date-picker input[type='datetime-local']::-webkit-inner-spin-button {
+        display: none;
+      }
+
+      /* Firefox specific styles */
+      .date-picker input[type='datetime-local']::-moz-focus-inner {
+        border: 0;
+      }
+
+      /* Better mobile support */
+      @media (max-width: 480px) {
+        .date-picker input[type='datetime-local'] {
+          font-size: 16px; /* Prevent zoom on iOS */
+        }
       }
 
       .recurring-section {
@@ -133,10 +187,26 @@
 
       select,
       input[type='time'] {
-        padding: 6px;
+        padding: 8px 12px;
         border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 13px;
+        border-radius: 6px;
+        font-size: 14px;
+        background: #fff;
+        color: #333;
+        font-family: inherit;
+        transition: all 0.2s;
+      }
+
+      select:focus,
+      input[type='time']:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+      }
+
+      select:hover,
+      input[type='time']:hover {
+        border-color: #007bff;
       }
 
       .action-btn {
@@ -272,6 +342,28 @@
         font-size: 12px;
         color: #999;
       }
+
+      /* Export/Import Section */
+      .export-import-section {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+      }
+
+      .export-import-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .secondary-btn {
+        background: #6c757d;
+        flex: 1;
+      }
+
+      .secondary-btn:hover {
+        background: #545b62;
+      }
     </style>
   </head>
   <body>
@@ -304,6 +396,7 @@
         <div class="custom-section">
           <div class="section-header">Pick Date</div>
           <div class="date-picker">
+            <label for="custom-date">Select date and time</label>
             <input type="datetime-local" id="custom-date" />
             <button class="action-btn" id="schedule-custom">Schedule</button>
           </div>
@@ -334,6 +427,15 @@
           <div class="empty-state-icon">😴</div>
           <div class="empty-state-text">No snoozed tabs</div>
           <div class="empty-state-subtext">Tabs you snooze will appear here</div>
+        </div>
+
+        <div class="export-import-section">
+          <div class="section-header">Backup & Restore</div>
+          <div class="export-import-buttons">
+            <button class="action-btn secondary-btn" id="export-history">Export History</button>
+            <button class="action-btn secondary-btn" id="import-history">Import History</button>
+          </div>
+          <input type="file" id="import-file" accept=".json" style="display: none" />
         </div>
       </div>
     </div>

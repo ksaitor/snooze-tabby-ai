@@ -130,6 +130,13 @@ document.addEventListener('DOMContentLoaded', () => {
       loadSnoozeHistory()
     }
   }, 10000) // Update every 10 seconds
+
+  // Export/Import event listeners
+  document.getElementById('export-history').addEventListener('click', exportHistory)
+  document.getElementById('import-history').addEventListener('click', () => {
+    document.getElementById('import-file').click()
+  })
+  document.getElementById('import-file').addEventListener('change', importHistory)
 })
 
 // Load snooze history
@@ -226,6 +233,71 @@ function removeSnoozeItem(key) {
     // Reload the history
     loadSnoozeHistory()
   })
+}
+
+// Export history to JSON
+function exportHistory() {
+  chrome.storage.local.get(null, result => {
+    const snoozeData = {}
+    Object.keys(result)
+      .filter(key => key.startsWith('snooze-'))
+      .forEach(key => {
+        snoozeData[key] = result[key]
+      })
+
+    const dataStr = JSON.stringify(snoozeData, null, 2)
+    const dataBlob = new Blob([dataStr], { type: 'application/json' })
+    const url = URL.createObjectURL(dataBlob)
+
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `snooze-tabby-history-${new Date().toISOString().split('T')[0]}.json`
+    link.click()
+
+    URL.revokeObjectURL(url)
+  })
+}
+
+// Import history from JSON
+function importHistory(event) {
+  const file = event.target.files[0]
+  if (!file) return
+
+  const reader = new FileReader()
+  reader.onload = e => {
+    try {
+      const importData = JSON.parse(e.target.result)
+
+      // Validate the data structure
+      const validKeys = Object.keys(importData).filter(
+        key => key.startsWith('snooze-') && importData[key].url && importData[key].title && importData[key].scheduledFor
+      )
+
+      if (validKeys.length === 0) {
+        alert('Invalid file format. Please select a valid Snooze Tabby export file.')
+        return
+      }
+
+      // Store the data
+      chrome.storage.local.set(importData, () => {
+        // Recreate alarms for future snoozes
+        validKeys.forEach(key => {
+          const item = importData[key]
+          if (item.scheduledFor > Date.now()) {
+            chrome.alarms.create(key, { when: item.scheduledFor })
+          }
+        })
+
+        alert(`Successfully imported ${validKeys.length} snooze item(s)`)
+        loadSnoozeHistory()
+      })
+    } catch (error) {
+      alert("Error reading file. Please make sure it's a valid JSON file.")
+    }
+  }
+
+  reader.readAsText(file)
+  event.target.value = '' // Reset file input
 }
 
 // Listen for messages from background script
