@@ -1,0 +1,27 @@
+{
+  "name": "snooze-tabby",
+  "version": "1.0.0",
+  "description": "A Chrome extension that allows you to snooze tabs for later with flexible scheduling options",
+  "main": "background.js",
+  "scripts": {
+    "build": "echo 'No build step required for this Chrome extension'",
+    "test": "echo 'No tests configured yet'"
+  },
+  "keywords": [
+    "chrome-extension",
+    "tabs",
+    "snooze",
+    "productivity",
+    "scheduling"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "bugs": {
+    "url": ""
+  },
+  "homepage": ""
+}

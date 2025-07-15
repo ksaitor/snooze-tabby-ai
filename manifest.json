@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "Snooze Tabby AI Edition",
+  "version": "1.1",
+  "description": "Snooze tabs for later with flexible scheduling options",
+  "permissions": ["tabs", "activeTab", "alarms", "storage", "notifications"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Snooze Tabby"
+  },
+  "commands": {
+    "snooze-4-hours": {
+      "suggested_key": {
+        "default": "Shift+Ctrl+1",
+        "mac": "Shift+Alt+1"
+      },
+      "description": "Snooze tab for 4 hours"
+    },
+    "snooze-tomorrow-9am": {
+      "suggested_key": {
+        "default": "Shift+Ctrl+2",
+        "mac": "Shift+Alt+2"
+      },
+      "description": "Snooze tab until tomorrow 9am"
+    },
+    "snooze-one-month": {
+      "suggested_key": {
+        "default": "Shift+Ctrl+3",
+        "mac": "Shift+Alt+3"
+      },
+      "description": "Snooze tab for one month"
+    }
+  }
+}
