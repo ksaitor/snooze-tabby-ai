@@ -2,6 +2,9 @@
 
 A Chrome extension that allows you to snooze tabs for later with flexible scheduling options.
 
+> 📢 **For more context about this project**, check out the
+> [original tweet](https://x.com/ksaitor/status/1944997383441731953) that inspired its creation.
+
 ## Features
 
 - **Quick Snooze Options**:
