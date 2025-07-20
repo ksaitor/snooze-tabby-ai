@@ -17,9 +17,77 @@ chrome.commands.onCommand.addListener(command => {
   })
 })
 
-// Handle alarm triggers
+// Handle startup - check for missed tabs when browser starts
+chrome.runtime.onStartup.addListener(() => {
+  checkForMissedTabs()
+  ensurePeriodicCheck()
+  cleanupOrphanedAlarms()
+})
+
+// Handle installation - also check for missed tabs
+chrome.runtime.onInstalled.addListener(() => {
+  checkForMissedTabs()
+  ensurePeriodicCheck()
+  cleanupOrphanedAlarms()
+})
+
+// Ensure periodic check alarm is set up
+function ensurePeriodicCheck() {
+  chrome.alarms
+    .get('periodic-check')
+    .then(alarm => {
+      if (!alarm) {
+        chrome.alarms
+          .create('periodic-check', { periodInMinutes: 15 })
+          .then(() => console.log('Periodic check alarm created'))
+          .catch(err => console.error('Failed to create periodic check alarm:', err))
+      }
+    })
+    .catch(err => {
+      console.error('Error checking periodic alarm:', err)
+      // Create it anyway
+      chrome.alarms
+        .create('periodic-check', { periodInMinutes: 15 })
+        .then(() => console.log('Periodic check alarm created'))
+        .catch(err => console.error('Failed to create periodic check alarm:', err))
+    })
+}
+
+// Clean up orphaned alarms (alarms without corresponding storage data)
+function cleanupOrphanedAlarms() {
+  chrome.alarms
+    .getAll()
+    .then(alarms => {
+      const snoozeAlarms = alarms.filter(alarm => alarm.name.startsWith('snooze-'))
+
+      if (snoozeAlarms.length > 0) {
+        const alarmNames = snoozeAlarms.map(alarm => alarm.name)
+        chrome.storage.local.get(alarmNames, data => {
+          const orphanedAlarms = alarmNames.filter(name => !data[name])
+
+          orphanedAlarms.forEach(alarmName => {
+            chrome.alarms
+              .clear(alarmName)
+              .then(() => {
+                console.log(`Cleaned up orphaned alarm: ${alarmName}`)
+              })
+              .catch(err => {
+                console.error(`Failed to clean up alarm ${alarmName}:`, err)
+              })
+          })
+        })
+      }
+    })
+    .catch(err => {
+      console.error('Error cleaning up orphaned alarms:', err)
+    })
+}
+
+// Handle periodic checks
 chrome.alarms.onAlarm.addListener(alarm => {
-  if (alarm.name.startsWith('snooze-')) {
+  if (alarm.name === 'periodic-check') {
+    checkForMissedTabs()
+  } else if (alarm.name.startsWith('snooze-')) {
     chrome.storage.local.get([alarm.name], result => {
       const tabData = result[alarm.name]
       if (tabData) {
@@ -41,30 +109,97 @@ chrome.alarms.onAlarm.addListener(alarm => {
   }
 })
 
+// Check for tabs that should have been opened during downtime
+function checkForMissedTabs() {
+  chrome.storage.local
+    .get(null, data => {
+      const now = Date.now()
+      const missedTabs = []
+
+      Object.keys(data).forEach(key => {
+        if (key.startsWith('snooze-') && data[key].scheduledFor <= now) {
+          missedTabs.push({ key, ...data[key] })
+        }
+      })
+
+      if (missedTabs.length > 0) {
+        console.log(`Found ${missedTabs.length} missed tabs, reopening...`)
+
+        missedTabs.forEach(tabData => {
+          try {
+            // Validate tab data
+            if (!tabData.url || !tabData.title) {
+              console.warn('Invalid tab data, skipping:', tabData)
+              chrome.storage.local.remove([tabData.key])
+              return
+            }
+
+            // Open the missed tab
+            chrome.tabs
+              .create({
+                url: tabData.url,
+                active: false, // Don't make it active to avoid disrupting user
+              })
+              .catch(err => {
+                console.error('Failed to open tab:', err)
+                showNotification(`Failed to open tab: ${tabData.title}`)
+              })
+
+            // Handle recurring tabs
+            if (tabData.recurring) {
+              scheduleRecurringSnooze(tabData)
+            } else {
+              // Clean up storage
+              chrome.storage.local.remove([tabData.key]).catch(err => {
+                console.error('Failed to clean up storage:', err)
+              })
+            }
+          } catch (err) {
+            console.error('Error processing missed tab:', err)
+          }
+        })
+
+        // Show notification about reopened tabs
+        showNotification(`${missedTabs.length} tab(s) reopened from snooze`)
+      }
+    })
+    .catch(err => {
+      console.error('Error checking for missed tabs:', err)
+    })
+}
+
 // Snooze tab function
 function snoozeTab(tab, delayMs) {
   const alarmName = `snooze-${Date.now()}`
   const when = Date.now() + delayMs
 
   // Store tab data
-  chrome.storage.local.set({
-    [alarmName]: {
-      url: tab.url,
-      title: tab.title,
-      timestamp: Date.now(),
-      scheduledFor: when,
-      recurring: false,
-    },
-  })
-
-  // Create alarm
-  chrome.alarms.create(alarmName, { when })
-
-  // Close the tab
-  chrome.tabs.remove(tab.id)
-
-  // Show notification
-  showNotification(`Tab snoozed until ${new Date(when).toLocaleString()}`)
+  chrome.storage.local
+    .set({
+      [alarmName]: {
+        url: tab.url,
+        title: tab.title,
+        timestamp: Date.now(),
+        scheduledFor: when,
+        recurring: false,
+      },
+    })
+    .then(() => {
+      // Create alarm with delay instead of absolute time for better persistence
+      return chrome.alarms.create(alarmName, { delayInMinutes: delayMs / (1000 * 60) })
+    })
+    .then(() => {
+      // Close the tab
+      return chrome.tabs.remove(tab.id)
+    })
+    .then(() => {
+      // Show notification
+      showNotification(`Tab snoozed until ${new Date(when).toLocaleString()}`)
+    })
+    .catch(err => {
+      console.error('Error snoozing tab:', err)
+      showNotification('Failed to snooze tab')
+    })
 }
 
 // Snooze until tomorrow 9AM
@@ -75,40 +210,62 @@ function snoozeTomorrowAt9AM(tab) {
 
   const alarmName = `snooze-${Date.now()}`
 
-  chrome.storage.local.set({
-    [alarmName]: {
-      url: tab.url,
-      title: tab.title,
-      timestamp: Date.now(),
-      scheduledFor: tomorrow.getTime(),
-      recurring: false,
-    },
-  })
-
-  chrome.alarms.create(alarmName, { when: tomorrow.getTime() })
-  chrome.tabs.remove(tab.id)
-
-  showNotification(`Tab snoozed until tomorrow at 9:00 AM`)
+  chrome.storage.local
+    .set({
+      [alarmName]: {
+        url: tab.url,
+        title: tab.title,
+        timestamp: Date.now(),
+        scheduledFor: tomorrow.getTime(),
+        recurring: false,
+      },
+    })
+    .then(() => {
+      // Use delayInMinutes for better persistence
+      const delayMs = tomorrow.getTime() - Date.now()
+      return chrome.alarms.create(alarmName, { delayInMinutes: delayMs / (1000 * 60) })
+    })
+    .then(() => {
+      return chrome.tabs.remove(tab.id)
+    })
+    .then(() => {
+      showNotification(`Tab snoozed until tomorrow at 9:00 AM`)
+    })
+    .catch(err => {
+      console.error('Error snoozing tab until tomorrow:', err)
+      showNotification('Failed to snooze tab')
+    })
 }
 
 // Schedule custom snooze
 function scheduleCustomSnooze(tab, targetDate) {
   const alarmName = `snooze-${Date.now()}`
 
-  chrome.storage.local.set({
-    [alarmName]: {
-      url: tab.url,
-      title: tab.title,
-      timestamp: Date.now(),
-      scheduledFor: targetDate.getTime(),
-      recurring: false,
-    },
-  })
-
-  chrome.alarms.create(alarmName, { when: targetDate.getTime() })
-  chrome.tabs.remove(tab.id)
-
-  showNotification(`Tab snoozed until ${targetDate.toLocaleString()}`)
+  chrome.storage.local
+    .set({
+      [alarmName]: {
+        url: tab.url,
+        title: tab.title,
+        timestamp: Date.now(),
+        scheduledFor: targetDate.getTime(),
+        recurring: false,
+      },
+    })
+    .then(() => {
+      // Use delayInMinutes for better persistence
+      const delayMs = targetDate.getTime() - Date.now()
+      return chrome.alarms.create(alarmName, { delayInMinutes: delayMs / (1000 * 60) })
+    })
+    .then(() => {
+      return chrome.tabs.remove(tab.id)
+    })
+    .then(() => {
+      showNotification(`Tab snoozed until ${targetDate.toLocaleString()}`)
+    })
+    .catch(err => {
+      console.error('Error scheduling custom snooze:', err)
+      showNotification('Failed to snooze tab')
+    })
 }
 
 // Schedule recurring snooze
@@ -133,14 +290,21 @@ function scheduleRecurringSnooze(tabData) {
     nextDate.setHours(parseInt(hours), parseInt(minutes), 0, 0)
   }
 
-  chrome.storage.local.set({
-    [alarmName]: {
-      ...tabData,
-      scheduledFor: nextDate.getTime(),
-    },
-  })
-
-  chrome.alarms.create(alarmName, { when: nextDate.getTime() })
+  chrome.storage.local
+    .set({
+      [alarmName]: {
+        ...tabData,
+        scheduledFor: nextDate.getTime(),
+      },
+    })
+    .then(() => {
+      // Use delayInMinutes for better persistence
+      const delayMs = nextDate.getTime() - Date.now()
+      return chrome.alarms.create(alarmName, { delayInMinutes: delayMs / (1000 * 60) })
+    })
+    .catch(err => {
+      console.error('Error scheduling recurring snooze:', err)
+    })
 }
 
 // Show notification
@@ -205,20 +369,31 @@ function scheduleRecurringTab(tab, recurringType, recurringTime) {
     nextDate.setHours(parseInt(hours), parseInt(minutes), 0, 0)
   }
 
-  chrome.storage.local.set({
-    [alarmName]: {
-      url: tab.url,
-      title: tab.title,
-      timestamp: Date.now(),
-      scheduledFor: nextDate.getTime(),
-      recurring: true,
-      recurringType: recurringType,
-      recurringTime: recurringTime,
-    },
-  })
-
-  chrome.alarms.create(alarmName, { when: nextDate.getTime() })
-  chrome.tabs.remove(tab.id)
-
-  showNotification(`Tab set to recur ${recurringType} at ${recurringTime || 'current time'}`)
+  chrome.storage.local
+    .set({
+      [alarmName]: {
+        url: tab.url,
+        title: tab.title,
+        timestamp: Date.now(),
+        scheduledFor: nextDate.getTime(),
+        recurring: true,
+        recurringType: recurringType,
+        recurringTime: recurringTime,
+      },
+    })
+    .then(() => {
+      // Use delayInMinutes for better persistence
+      const delayMs = nextDate.getTime() - Date.now()
+      return chrome.alarms.create(alarmName, { delayInMinutes: delayMs / (1000 * 60) })
+    })
+    .then(() => {
+      return chrome.tabs.remove(tab.id)
+    })
+    .then(() => {
+      showNotification(`Tab set to recur ${recurringType} at ${recurringTime || 'current time'}`)
+    })
+    .catch(err => {
+      console.error('Error scheduling recurring tab:', err)
+      showNotification('Failed to schedule recurring tab')
+    })
 }

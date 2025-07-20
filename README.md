@@ -15,6 +15,7 @@ A Chrome extension that allows you to snooze tabs for later with flexible schedu
 
 - **Custom Scheduling**: Pick any date and time using a date picker
 - **Recurring Snooze**: Set tabs to reopen daily, monthly, or yearly at specific times
+- **Persistent Scheduling**: Tabs will reopen even after computer shutdown or browser closure
 - **Keyboard Shortcuts**:
   - `Shift+Command+1` (Mac) / `Shift+Ctrl+1` (Windows/Linux) - Snooze for 4 hours
   - `Shift+Command+2` (Mac) / `Shift+Ctrl+2` (Windows/Linux) - Snooze until tomorrow 9AM
@@ -67,6 +68,24 @@ The extension uses Chrome's alarm API to schedule when tabs should be reopened. 
 2. An alarm is created for the scheduled time
 3. The tab is closed
 4. When the alarm fires, the tab is reopened at the saved URL
+
+### Persistent Scheduling
+
+The extension includes robust persistence mechanisms to ensure your snoozed tabs are never lost:
+
+- **Startup Recovery**: When the browser starts, the extension checks for any tabs that should have been opened during
+  downtime
+- **Periodic Checks**: Every 15 minutes, the extension verifies no tabs were missed
+- **Alarm Persistence**: Uses Chrome's persistent alarm API to survive browser restarts
+- **Error Recovery**: Comprehensive error handling and logging for debugging
+- **Data Validation**: Validates stored tab data to prevent corruption
+
+This means your snoozed tabs will reopen reliably even if:
+
+- Your computer is turned off and back on
+- The browser is closed and reopened
+- The extension is updated or reinstalled
+- There are temporary system issues
 
 ## Files Structure
 
