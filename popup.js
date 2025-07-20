@@ -85,16 +85,51 @@ document.addEventListener('DOMContentLoaded', () => {
     window.close()
   })
 
+  // Handle recurring type change to show/hide weekly days selector
+  document.getElementById('recurring-type').addEventListener('change', () => {
+    const recurringType = document.getElementById('recurring-type').value
+    const weeklyDays = document.getElementById('weekly-days')
+
+    if (recurringType === 'weekly') {
+      weeklyDays.style.display = 'block'
+      // Default select current day of week
+      const currentDay = new Date().getDay()
+      const currentDayCheckbox = document.querySelector(`#weekly-days input[value="${currentDay}"]`)
+      if (currentDayCheckbox) {
+        currentDayCheckbox.checked = true
+      }
+    } else {
+      weeklyDays.style.display = 'none'
+      // Clear all checkboxes when switching away from weekly
+      document.querySelectorAll('#weekly-days input[type="checkbox"]').forEach(cb => {
+        cb.checked = false
+      })
+    }
+  })
+
   // Recurring schedule
   document.getElementById('schedule-recurring').addEventListener('click', () => {
     const recurringType = document.getElementById('recurring-type').value
     const recurringTime = document.getElementById('recurring-time').value
+
+    // Get selected days for weekly recurring
+    let selectedDays = []
+    if (recurringType === 'weekly') {
+      const dayCheckboxes = document.querySelectorAll('#weekly-days input[type="checkbox"]:checked')
+      selectedDays = Array.from(dayCheckboxes).map(cb => parseInt(cb.value))
+
+      if (selectedDays.length === 0) {
+        alert('Please select at least one day of the week')
+        return
+      }
+    }
 
     chrome.runtime.sendMessage({
       action: 'snoozeTab',
       type: 'recurring',
       recurringType: recurringType,
       recurringTime: recurringTime,
+      selectedDays: selectedDays,
     })
 
     window.close()
@@ -189,7 +224,24 @@ function createHistoryItem(item) {
       </div>
       <div class="history-item-url">${escapeHtml(truncatedUrl)}</div>
       <div class="history-item-time">${timeUntil}</div>
-      ${item.recurring ? `<div class="history-item-recurring">Recurring ${escapeHtml(item.recurringType)}</div>` : ''}
+      ${
+        item.recurring
+          ? `<div class="history-item-recurring">Recurring ${escapeHtml(item.recurringType)}${
+              item.selectedDays && item.recurringType === 'weekly'
+                ? ` (${item.selectedDays
+                    .map(day => {
+                      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+                      return dayNames[day]
+                    })
+                    .sort((a, b) => {
+                      const order = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+                      return order.indexOf(a) - order.indexOf(b)
+                    })
+                    .join(', ')})`
+                : ''
+            }</div>`
+          : ''
+      }
     </div>
   `
 }

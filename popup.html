@@ -95,9 +95,7 @@
       }
 
       .custom-section {
-        margin-top: 20px;
         padding-top: 20px;
-        border-top: 1px solid #eee;
       }
 
       .date-picker {
@@ -387,6 +385,68 @@
       .link-btn:hover {
         color: #007bff;
       }
+
+      /* Weekly days selector styles */
+      .weekly-days {
+        margin-top: 10px;
+      }
+
+      .days-label {
+        font-size: 13px;
+        color: #666;
+        font-weight: 500;
+        margin-bottom: 8px;
+      }
+
+      .days-selector {
+        display: flex;
+        gap: 4px;
+        justify-content: space-between;
+      }
+
+      .day-checkbox {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .day-checkbox input[type='checkbox'] {
+        display: none;
+      }
+
+      .day-checkbox span {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        background: #fff;
+        font-size: 12px;
+        font-weight: 500;
+        color: #666;
+        transition: all 0.2s;
+      }
+
+      .day-checkbox input[type='checkbox']:checked + span {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+      }
+
+      .day-checkbox:hover span {
+        border-color: #007bff;
+        color: #007bff;
+      }
+
+      .day-checkbox input[type='checkbox']:checked:hover + span {
+        background: #0056b3;
+        border-color: #0056b3;
+        color: white;
+      }
     </style>
   </head>
   <body>
@@ -397,8 +457,6 @@
 
     <div class="tab-content">
       <div class="tab-pane active" id="snooze-tab">
-        <h3>Snooze Tabby</h3>
-
         <div class="snooze-options">
           <div class="snooze-btn" id="snooze-4-hours">
             <span>In 4 hours</span>
@@ -419,7 +477,6 @@
         <div class="custom-section">
           <div class="section-header">Pick Date</div>
           <div class="date-picker">
-            <label for="custom-date">Select date and time</label>
             <input type="datetime-local" id="custom-date" />
             <button class="action-btn" id="schedule-custom">
               <span class="icon">📅</span>
@@ -434,10 +491,44 @@
             <div class="recurring-row">
               <select id="recurring-type">
                 <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
                 <option value="monthly">Monthly</option>
                 <option value="yearly">Yearly</option>
               </select>
               <input type="time" id="recurring-time" value="09:00" />
+            </div>
+            <div class="weekly-days" id="weekly-days" style="display: none">
+              <div class="days-label">Select days:</div>
+              <div class="days-selector">
+                <label class="day-checkbox">
+                  <input type="checkbox" value="1" />
+                  <span>Mon</span>
+                </label>
+                <label class="day-checkbox">
+                  <input type="checkbox" value="2" />
+                  <span>Tue</span>
+                </label>
+                <label class="day-checkbox">
+                  <input type="checkbox" value="3" />
+                  <span>Wed</span>
+                </label>
+                <label class="day-checkbox">
+                  <input type="checkbox" value="4" />
+                  <span>Thu</span>
+                </label>
+                <label class="day-checkbox">
+                  <input type="checkbox" value="5" />
+                  <span>Fri</span>
+                </label>
+                <label class="day-checkbox">
+                  <input type="checkbox" value="6" />
+                  <span>Sat</span>
+                </label>
+                <label class="day-checkbox">
+                  <input type="checkbox" value="0" />
+                  <span>Sun</span>
+                </label>
+              </div>
             </div>
             <button class="action-btn" id="schedule-recurring">
               <span class="icon">🔄</span>

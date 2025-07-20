@@ -277,6 +277,26 @@ function scheduleRecurringSnooze(tabData) {
     case 'daily':
       nextDate.setDate(nextDate.getDate() + 1)
       break
+    case 'weekly':
+      if (tabData.selectedDays && tabData.selectedDays.length > 0) {
+        // Find the next occurrence of any selected day
+        const currentDay = nextDate.getDay()
+        let daysToAdd = 1
+
+        // Check if any selected day is today or in the next 6 days
+        for (let i = 1; i <= 7; i++) {
+          const checkDay = (currentDay + i) % 7
+          if (tabData.selectedDays.includes(checkDay)) {
+            daysToAdd = i
+            break
+          }
+        }
+        nextDate.setDate(nextDate.getDate() + daysToAdd)
+      } else {
+        // Fallback to next week same day
+        nextDate.setDate(nextDate.getDate() + 7)
+      }
+      break
     case 'monthly':
       nextDate.setMonth(nextDate.getMonth() + 1)
       break
@@ -340,7 +360,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (request.type === 'custom') {
           scheduleCustomSnooze(tabs[0], new Date(request.date))
         } else if (request.type === 'recurring') {
-          scheduleRecurringTab(tabs[0], request.recurringType, request.recurringTime)
+          scheduleRecurringTab(tabs[0], request.recurringType, request.recurringTime, request.selectedDays)
         }
       }
     })
@@ -348,13 +368,33 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 })
 
 // Schedule recurring tab
-function scheduleRecurringTab(tab, recurringType, recurringTime) {
+function scheduleRecurringTab(tab, recurringType, recurringTime, selectedDays = []) {
   const alarmName = `snooze-${Date.now()}`
   let nextDate = new Date()
 
   switch (recurringType) {
     case 'daily':
       nextDate.setDate(nextDate.getDate() + 1)
+      break
+    case 'weekly':
+      if (selectedDays.length > 0) {
+        // Find the next occurrence of any selected day
+        const currentDay = nextDate.getDay()
+        let daysToAdd = 1
+
+        // Check if any selected day is today or in the next 6 days
+        for (let i = 1; i <= 7; i++) {
+          const checkDay = (currentDay + i) % 7
+          if (selectedDays.includes(checkDay)) {
+            daysToAdd = i
+            break
+          }
+        }
+        nextDate.setDate(nextDate.getDate() + daysToAdd)
+      } else {
+        // Fallback to next week same day
+        nextDate.setDate(nextDate.getDate() + 7)
+      }
       break
     case 'monthly':
       nextDate.setMonth(nextDate.getMonth() + 1)
@@ -379,6 +419,7 @@ function scheduleRecurringTab(tab, recurringType, recurringTime) {
         recurring: true,
         recurringType: recurringType,
         recurringTime: recurringTime,
+        selectedDays: selectedDays,
       },
     })
     .then(() => {
@@ -390,7 +431,19 @@ function scheduleRecurringTab(tab, recurringType, recurringTime) {
       return chrome.tabs.remove(tab.id)
     })
     .then(() => {
-      showNotification(`Tab set to recur ${recurringType} at ${recurringTime || 'current time'}`)
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+      const selectedDayNames = selectedDays
+        .map(day => dayNames[day])
+        .sort((a, b) => {
+          const order = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+          return order.indexOf(a) - order.indexOf(b)
+        })
+        .join(', ')
+      const message =
+        recurringType === 'weekly'
+          ? `Tab set to recur weekly on ${selectedDayNames} at ${recurringTime || 'current time'}`
+          : `Tab set to recur ${recurringType} at ${recurringTime || 'current time'}`
+      showNotification(message)
     })
     .catch(err => {
       console.error('Error scheduling recurring tab:', err)
