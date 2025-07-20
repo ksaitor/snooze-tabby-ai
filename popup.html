@@ -148,8 +148,15 @@
         transition: all 0.2s;
       }
 
+      .date-picker input[type='datetime-local']::-webkit-calendar-picker-indicator {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3e%3cpath fill='%23666' d='M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z'/%3e%3c/svg%3e");
+        width: 16px;
+        height: 16px;
+        opacity: 0.5;
+      }
+
       .date-picker input[type='datetime-local']::-webkit-calendar-picker-indicator:hover {
-        background: #f0f0f0;
+        opacity: 1;
       }
 
       .date-picker input[type='datetime-local']::-webkit-inner-spin-button {
@@ -219,6 +226,10 @@
         font-size: 14px;
         font-weight: 500;
         transition: background 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
       }
 
       .action-btn:hover {
@@ -228,6 +239,11 @@
       .action-btn:disabled {
         background: #ccc;
         cursor: not-allowed;
+      }
+
+      .action-btn .icon {
+        font-size: 16px;
+        line-height: 1;
       }
 
       .hidden {
@@ -405,7 +421,10 @@
           <div class="date-picker">
             <label for="custom-date">Select date and time</label>
             <input type="datetime-local" id="custom-date" />
-            <button class="action-btn" id="schedule-custom">Schedule</button>
+            <button class="action-btn" id="schedule-custom">
+              <span class="icon">📅</span>
+              Schedule
+            </button>
           </div>
         </div>
 
@@ -420,7 +439,10 @@
               </select>
               <input type="time" id="recurring-time" value="09:00" />
             </div>
-            <button class="action-btn" id="schedule-recurring">Set Recurring</button>
+            <button class="action-btn" id="schedule-recurring">
+              <span class="icon">🔄</span>
+              Set Recurring
+            </button>
           </div>
         </div>
       </div>
