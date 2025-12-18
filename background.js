@@ -12,6 +12,9 @@ chrome.commands.onCommand.addListener(command => {
         case 'snooze-one-month':
           snoozeTab(tabs[0], 30 * 24 * 60 * 60 * 1000) // 30 days in milliseconds
           break
+        case 'snooze-next-monday':
+          snoozeNextMonday(tabs[0])
+          break
       }
     }
   })
@@ -237,6 +240,50 @@ function snoozeTomorrowAt9AM(tab) {
     })
 }
 
+// Snooze until next Monday 9AM
+function snoozeNextMonday(tab) {
+  const nextMonday = new Date()
+  const currentDay = nextMonday.getDay()
+
+  // Calculate days until next Monday (1 = Monday, 0 = Sunday)
+  // If today is Monday, schedule for next Monday (7 days)
+  let daysUntilMonday = (1 - currentDay + 7) % 7
+  if (daysUntilMonday === 0) {
+    daysUntilMonday = 7 // If today is Monday, schedule for next Monday
+  }
+
+  nextMonday.setDate(nextMonday.getDate() + daysUntilMonday)
+  nextMonday.setHours(9, 0, 0, 0)
+
+  const alarmName = `snooze-${Date.now()}`
+
+  chrome.storage.local
+    .set({
+      [alarmName]: {
+        url: tab.url,
+        title: tab.title,
+        timestamp: Date.now(),
+        scheduledFor: nextMonday.getTime(),
+        recurring: false,
+      },
+    })
+    .then(() => {
+      // Use delayInMinutes for better persistence
+      const delayMs = nextMonday.getTime() - Date.now()
+      return chrome.alarms.create(alarmName, { delayInMinutes: delayMs / (1000 * 60) })
+    })
+    .then(() => {
+      return chrome.tabs.remove(tab.id)
+    })
+    .then(() => {
+      showNotification(`Tab snoozed until next Monday at 9:00 AM`)
+    })
+    .catch(err => {
+      console.error('Error snoozing tab until next Monday:', err)
+      showNotification('Failed to snooze tab')
+    })
+}
+
 // Schedule custom snooze
 function scheduleCustomSnooze(tab, targetDate) {
   const alarmName = `snooze-${Date.now()}`
@@ -350,6 +397,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             break
           case 'one-month':
             snoozeTab(tabs[0], 30 * 24 * 60 * 60 * 1000)
+            break
+          case 'next-monday':
+            snoozeNextMonday(tabs[0])
             break
         }
       }

@@ -59,6 +59,19 @@ document.addEventListener('DOMContentLoaded', () => {
     })
   })
 
+  document.getElementById('snooze-next-monday').addEventListener('click', () => {
+    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+      if (tabs[0]) {
+        chrome.runtime.sendMessage({
+          action: 'snooze',
+          type: 'next-monday',
+          tab: tabs[0],
+        })
+        window.close()
+      }
+    })
+  })
+
   // Custom date scheduling
   document.getElementById('schedule-custom').addEventListener('click', () => {
     const dateInput = document.getElementById('custom-date')

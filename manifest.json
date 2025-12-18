@@ -28,10 +28,17 @@
     },
     "snooze-one-month": {
       "suggested_key": {
+        "default": "Shift+Ctrl+4",
+        "mac": "Shift+Alt+4"
+      },
+      "description": "Snooze tab for one month"
+    },
+    "snooze-next-monday": {
+      "suggested_key": {
         "default": "Shift+Ctrl+3",
         "mac": "Shift+Alt+3"
       },
-      "description": "Snooze tab for one month"
+      "description": "Snooze tab until next Monday 9am"
     }
   }
 }
