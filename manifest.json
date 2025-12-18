@@ -14,29 +14,29 @@
   "commands": {
     "snooze-4-hours": {
       "suggested_key": {
-        "default": "Shift+Ctrl+1",
-        "mac": "Shift+Alt+1"
+        "default": "Ctrl+Shift+1",
+        "mac": "Command+Shift+1"
       },
       "description": "Snooze tab for 4 hours"
     },
     "snooze-tomorrow-9am": {
       "suggested_key": {
-        "default": "Shift+Ctrl+2",
-        "mac": "Shift+Alt+2"
+        "default": "Ctrl+Shift+2",
+        "mac": "Command+Shift+2"
       },
       "description": "Snooze tab until tomorrow 9am"
     },
     "snooze-one-month": {
       "suggested_key": {
-        "default": "Shift+Ctrl+4",
-        "mac": "Shift+Alt+4"
+        "default": "Ctrl+Shift+4",
+        "mac": "Command+Shift+4"
       },
       "description": "Snooze tab for one month"
     },
     "snooze-next-monday": {
       "suggested_key": {
-        "default": "Shift+Ctrl+3",
-        "mac": "Shift+Alt+3"
+        "default": "Ctrl+Shift+3",
+        "mac": "Command+Shift+3"
       },
       "description": "Snooze tab until next Monday 9am"
     }
