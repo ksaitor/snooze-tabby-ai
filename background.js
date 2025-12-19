@@ -113,62 +113,63 @@ chrome.alarms.onAlarm.addListener(alarm => {
 })
 
 // Check for tabs that should have been opened during downtime
-function checkForMissedTabs() {
-  chrome.storage.local
-    .get(null, data => {
-      const now = Date.now()
-      const missedTabs = []
+async function checkForMissedTabs() {
+  try {
+    const data = await chrome.storage.local.get(null)
+    const now = Date.now()
+    const missedTabs = []
 
-      Object.keys(data).forEach(key => {
-        if (key.startsWith('snooze-') && data[key].scheduledFor <= now) {
-          missedTabs.push({ key, ...data[key] })
-        }
-      })
-
-      if (missedTabs.length > 0) {
-        console.log(`Found ${missedTabs.length} missed tabs, reopening...`)
-
-        missedTabs.forEach(tabData => {
-          try {
-            // Validate tab data
-            if (!tabData.url || !tabData.title) {
-              console.warn('Invalid tab data, skipping:', tabData)
-              chrome.storage.local.remove([tabData.key])
-              return
-            }
-
-            // Open the missed tab
-            chrome.tabs
-              .create({
-                url: tabData.url,
-                active: false, // Don't make it active to avoid disrupting user
-              })
-              .catch(err => {
-                console.error('Failed to open tab:', err)
-                showNotification(`Failed to open tab: ${tabData.title}`)
-              })
-
-            // Handle recurring tabs
-            if (tabData.recurring) {
-              scheduleRecurringSnooze(tabData)
-            } else {
-              // Clean up storage
-              chrome.storage.local.remove([tabData.key]).catch(err => {
-                console.error('Failed to clean up storage:', err)
-              })
-            }
-          } catch (err) {
-            console.error('Error processing missed tab:', err)
-          }
-        })
-
-        // Show notification about reopened tabs
-        showNotification(`${missedTabs.length} tab(s) reopened from snooze`)
+    Object.keys(data).forEach(key => {
+      if (key.startsWith('snooze-') && data[key].scheduledFor <= now) {
+        missedTabs.push({ key, ...data[key] })
       }
     })
-    .catch(err => {
-      console.error('Error checking for missed tabs:', err)
-    })
+
+    if (missedTabs.length > 0) {
+      console.log(`Found ${missedTabs.length} missed tabs, reopening...`)
+
+      for (const tabData of missedTabs) {
+        try {
+          // Validate tab data
+          if (!tabData.url || !tabData.title) {
+            console.warn('Invalid tab data, skipping:', tabData)
+            await chrome.storage.local.remove([tabData.key])
+            continue
+          }
+
+          // Open the missed tab
+          try {
+            await chrome.tabs.create({
+              url: tabData.url,
+              active: false, // Don't make it active to avoid disrupting user
+            })
+          } catch (err) {
+            console.error('Failed to open tab:', err)
+            showNotification(`Failed to open tab: ${tabData.title}`)
+          }
+
+          // Handle recurring tabs
+          if (tabData.recurring) {
+            scheduleRecurringSnooze(tabData)
+          } else {
+            // Clean up storage
+            try {
+              await chrome.storage.local.remove([tabData.key])
+            } catch (err) {
+              console.error('Failed to clean up storage:', err)
+            }
+          }
+        } catch (err) {
+          console.error('Error processing missed tab:', err)
+        }
+      }
+
+      // Show notification about reopened tabs
+      showNotification(`${missedTabs.length} tab(s) reopened from snooze`)
+    }
+  } catch (err) {
+    console.error('Error checking for missed tabs:', err)
+  }
 }
 
 // Snooze tab function
