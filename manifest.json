@@ -4,12 +4,22 @@
   "version": "1.1",
   "description": "Snooze tabs for later with flexible scheduling options",
   "permissions": ["tabs", "activeTab", "alarms", "storage", "notifications"],
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
   "background": {
     "service_worker": "background.js"
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Snooze Tabby"
+    "default_title": "Snooze Tabby",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
   },
   "commands": {
     "snooze-4-hours": {

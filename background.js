@@ -377,11 +377,19 @@ function scheduleRecurringSnooze(tabData) {
 
 // Show notification
 function showNotification(message) {
-  chrome.notifications?.create({
-    type: 'basic',
-    title: 'Snooze Tabby',
-    message: message,
-  })
+  chrome.notifications?.create(
+    {
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('icon128.png'),
+      title: 'Snooze Tabby',
+      message: message,
+    },
+    () => {
+      if (chrome.runtime.lastError) {
+        console.error('Notification error:', chrome.runtime.lastError.message)
+      }
+    }
+  )
 }
 
 // Listen for messages from popup
