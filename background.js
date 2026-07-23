@@ -25,6 +25,67 @@ chrome.runtime.onStartup.addListener(() => {
   checkForMissedTabs()
   ensurePeriodicCheck()
   cleanupOrphanedAlarms()
+  restoreWokenBadge()
+})
+
+// Tab group that collects woken tabs so they don't steal focus
+const WOKEN_GROUP_TITLE = 'Woken up 💤'
+
+// Open a woken tab in the background and collect it into the woken group
+async function openWokenTab(url) {
+  const tab = await chrome.tabs.create({
+    url: url,
+    active: false, // Don't steal focus from whatever the user is doing
+  })
+
+  try {
+    const groups = await chrome.tabGroups.query({ title: WOKEN_GROUP_TITLE, windowId: tab.windowId })
+    if (groups.length > 0) {
+      await chrome.tabs.group({ tabIds: tab.id, groupId: groups[0].id })
+    } else {
+      const groupId = await chrome.tabs.group({ tabIds: tab.id })
+      await chrome.tabGroups.update(groupId, { title: WOKEN_GROUP_TITLE, color: 'purple' })
+    }
+  } catch (err) {
+    // Grouping is best-effort; the tab is already open
+    console.error('Failed to group woken tab:', err)
+  }
+
+  return tab
+}
+
+// Increment the badge counter of woken tabs (cleared when popup opens)
+async function incrementWokenBadge(count = 1) {
+  try {
+    const { wokenCount = 0 } = await chrome.storage.local.get('wokenCount')
+    const newCount = wokenCount + count
+    await chrome.storage.local.set({ wokenCount: newCount })
+    await chrome.action.setBadgeBackgroundColor({ color: '#007bff' })
+    await chrome.action.setBadgeText({ text: String(newCount) })
+  } catch (err) {
+    console.error('Failed to update badge:', err)
+  }
+}
+
+// Restore badge from storage after browser restart
+async function restoreWokenBadge() {
+  try {
+    const { wokenCount = 0 } = await chrome.storage.local.get('wokenCount')
+    if (wokenCount > 0) {
+      await chrome.action.setBadgeBackgroundColor({ color: '#007bff' })
+      await chrome.action.setBadgeText({ text: String(wokenCount) })
+    }
+  } catch (err) {
+    console.error('Failed to restore badge:', err)
+  }
+}
+
+// Popup clears the badge when opened
+chrome.runtime.onMessage.addListener(request => {
+  if (request.action === 'clearWokenBadge') {
+    chrome.storage.local.set({ wokenCount: 0 })
+    chrome.action.setBadgeText({ text: '' })
+  }
 })
 
 // Handle installation - also check for missed tabs
@@ -94,11 +155,16 @@ chrome.alarms.onAlarm.addListener(alarm => {
     chrome.storage.local.get([alarm.name], result => {
       const tabData = result[alarm.name]
       if (tabData) {
-        // Reopen the tab
-        chrome.tabs.create({
-          url: tabData.url,
-          active: true,
-        })
+        // Reopen the tab gently: in the background, grouped, with badge + notification
+        openWokenTab(tabData.url)
+          .then(() => {
+            incrementWokenBadge()
+            showNotification(`Tab woke up: ${tabData.title}`)
+          })
+          .catch(err => {
+            console.error('Failed to reopen snoozed tab:', err)
+            showNotification(`Failed to reopen tab: ${tabData.title}`)
+          })
 
         // Check if it's a recurring snooze
         if (tabData.recurring) {
@@ -137,12 +203,9 @@ async function checkForMissedTabs() {
             continue
           }
 
-          // Open the missed tab
+          // Open the missed tab gently in the woken group
           try {
-            await chrome.tabs.create({
-              url: tabData.url,
-              active: false, // Don't make it active to avoid disrupting user
-            })
+            await openWokenTab(tabData.url)
           } catch (err) {
             console.error('Failed to open tab:', err)
             showNotification(`Failed to open tab: ${tabData.title}`)
@@ -165,6 +228,7 @@ async function checkForMissedTabs() {
       }
 
       // Show notification about reopened tabs
+      incrementWokenBadge(missedTabs.length)
       showNotification(`${missedTabs.length} tab(s) reopened from snooze`)
     }
   } catch (err) {

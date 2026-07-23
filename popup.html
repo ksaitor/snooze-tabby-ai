@@ -297,23 +297,31 @@
       }
 
       .remove-btn {
-        background: #dc3545;
-        color: white;
+        background: transparent;
+        color: #999;
         border: none;
         border-radius: 4px;
         width: 20px;
         height: 20px;
         cursor: pointer;
-        font-size: 12px;
+        font-size: 14px;
+        line-height: 1;
         display: flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
-        transition: background 0.2s;
+        opacity: 0;
+        transition: opacity 0.2s, background 0.2s, color 0.2s;
+      }
+
+      .history-item:hover .remove-btn,
+      .remove-btn:focus-visible {
+        opacity: 1;
       }
 
       .remove-btn:hover {
-        background: #c82333;
+        background: #dc3545;
+        color: #fff;
       }
 
       .history-item-url {
@@ -327,6 +335,13 @@
         color: #007bff;
         font-size: 12px;
         font-weight: 500;
+      }
+
+      .history-item-snoozed {
+        color: #999;
+        font-size: 11px;
+        font-weight: 400;
+        margin-left: 6px;
       }
 
       .history-item-recurring {

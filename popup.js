@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // Opening the popup acknowledges woken tabs — clear the badge counter
+  chrome.runtime.sendMessage({ action: 'clearWokenBadge' })
+
   // Tab switching functionality
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', e => {
@@ -236,7 +239,13 @@ function createHistoryItem(item) {
         <button class="remove-btn" data-key="${escapeHtml(item.key)}">×</button>
       </div>
       <div class="history-item-url">${escapeHtml(truncatedUrl)}</div>
-      <div class="history-item-time">${timeUntil}</div>
+      <div class="history-item-time">${timeUntil}${
+        item.timestamp
+          ? `<span class="history-item-snoozed" title="Snoozed on ${escapeHtml(
+              formatDateTime(item.timestamp)
+            )}">· snoozed ${getTimeAgo(item.timestamp)}</span>`
+          : ''
+      }</div>
       ${
         item.recurring
           ? `<div class="history-item-recurring">Recurring ${escapeHtml(item.recurringType)}${
@@ -288,6 +297,36 @@ function getTimeUntilReopen(scheduledFor) {
   } else {
     return 'in less than a minute'
   }
+}
+
+// Calculate how long ago the tab was snoozed
+function getTimeAgo(timestamp) {
+  const timeDiff = Date.now() - timestamp
+
+  const minutes = Math.floor(timeDiff / (1000 * 60))
+  const hours = Math.floor(timeDiff / (1000 * 60 * 60))
+  const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24))
+
+  if (days > 0) {
+    return `${days} day${days !== 1 ? 's' : ''} ago`
+  } else if (hours > 0) {
+    return `${hours} hour${hours !== 1 ? 's' : ''} ago`
+  } else if (minutes > 0) {
+    return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`
+  } else {
+    return 'just now'
+  }
+}
+
+// Format an absolute date/time for tooltips
+function formatDateTime(timestamp) {
+  return new Date(timestamp).toLocaleString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 // Remove snooze item
