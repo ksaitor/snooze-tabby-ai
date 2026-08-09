@@ -1,118 +1,49 @@
-# Snooze Tabby - Chrome Extension
+# Snooze Tabby — Snooze Tabs in Chrome and Get Them Back When You Need Them
 
-A Chrome extension that allows you to snooze tabs for later with flexible scheduling options.
+Snooze Tabby is a free Chrome extension that closes a tab now and automatically reopens it exactly when you need it — in 4 hours, tomorrow morning, next Monday, or on any custom or recurring schedule. Declutter your browser without losing anything: snoozed tabs come back reliably, even after you close the browser or shut down your computer.
 
-> 📢 **For more context about this project**, check out the
-> [original tweet](https://x.com/ksaitor/status/1944997383441731953) that inspired its creation.
+![Snooze Tabby Chrome extension popup with quick snooze buttons, a custom date picker, and daily, weekly, monthly, and yearly recurring schedules](snooze-tabby-ai.png)
 
 ## Features
 
-- **Quick Snooze Options**:
-
-  - In 4 hours
-  - Tomorrow 9AM
-  - In one month
-
-- **Custom Scheduling**: Pick any date and time using a date picker
-- **Recurring Snooze**: Set tabs to reopen daily, monthly, or yearly at specific times
-- **Persistent Scheduling**: Tabs will reopen even after computer shutdown or browser closure
-- **Keyboard Shortcuts**:
-  - `Shift+Command+1` (Mac) / `Shift+Ctrl+1` (Windows/Linux) - Snooze for 4 hours
-  - `Shift+Command+2` (Mac) / `Shift+Ctrl+2` (Windows/Linux) - Snooze until tomorrow 9AM
-  - `Shift+Command+3` (Mac) / `Shift+Ctrl+3` (Windows/Linux) - Snooze for one month
+- **One-click snooze** — In 4 hours · Tomorrow 9AM · Next Monday 9AM · In one month
+- **Custom date & time** — pick any moment with the date picker
+- **Recurring tabs** — reopen a tab daily, weekly, monthly, or yearly (e.g. your timesheet every Friday at 9:00)
+- **Never lose a tab** — schedules survive browser restarts and shutdowns; anything missed reopens on next launch
+- **History** — see all snoozed tabs, cancel any schedule, export/import backups
+- **Keyboard shortcuts** — snooze the current tab without opening the popup
 
 ## Installation
 
-1. Clone or download this repository
-2. Open Chrome and navigate to `chrome://extensions/`
-3. Enable "Developer mode" in the top right
-4. Click "Load unpacked" and select the extension folder
-5. The extension will now appear in your browser toolbar
+1. Download or clone this repository
+2. Open `chrome://extensions/` in Chrome
+3. Turn on **Developer mode** (top right)
+4. Click **Load unpacked** and select the extension folder
+5. Pin Snooze Tabby to your toolbar — done
 
-## Usage
+Works in Google Chrome, Microsoft Edge, and other Chromium-based browsers (Manifest V3).
 
-### Quick Snooze
+## How to snooze a tab
 
-1. Click the Snooze Tabby icon in the browser toolbar
-2. Select one of the quick options (4 hours, tomorrow 9AM, or one month)
-3. The current tab will be closed and reopened at the scheduled time
+1. Click the Snooze Tabby icon in the toolbar
+2. Pick a quick option, choose a custom date, or set a recurring schedule
+3. The tab closes and reopens automatically at the scheduled time
 
-### Custom Date/Time
+Manage or cancel snoozed tabs anytime from the **History** tab in the popup.
 
-1. Click the Snooze Tabby icon
-2. In the "Pick Date" section, select your desired date and time
-3. Click "Schedule"
-4. The tab will be closed and reopened at your chosen time
+## Keyboard shortcuts
 
-### Recurring Snooze
+| Snooze until       | Mac           | Windows / Linux |
+| ------------------ | ------------- | --------------- |
+| In 4 hours         | `Shift+Alt+1` | `Shift+Ctrl+1`  |
+| Tomorrow 9AM       | `Shift+Alt+2` | `Shift+Ctrl+2`  |
+| Next Monday 9AM    | `Shift+Alt+3` | `Shift+Ctrl+3`  |
+| In one month       | `Shift+Alt+4` | `Shift+Ctrl+4`  |
 
-1. Click the Snooze Tabby icon
-2. In the "Recurring" section, choose the frequency (daily, weekly, monthly, yearly)
-3. Set the schedule details. For monthly schedules, enter the day of the month (1-31); months without that day use their last day. For yearly schedules, choose the date and time in the calendar picker.
-4. Click "Set Recurring"
-5. The tab will be closed and will reopen according to your schedule
+## Privacy
 
-### Keyboard Shortcuts
+Everything stays on your device. Snoozed tab URLs are stored locally in your browser — no account, no servers, no tracking.
 
-You can use the predefined keyboard shortcuts to quickly snooze tabs without opening the popup:
+---
 
-- `Shift+Command+1` (Mac) / `Shift+Ctrl+1` (Windows/Linux) - 4 hours
-- `Shift+Command+2` (Mac) / `Shift+Ctrl+2` (Windows/Linux) - Tomorrow 9AM
-- `Shift+Command+3` (Mac) / `Shift+Ctrl+3` (Windows/Linux) - One month
-
-## How It Works
-
-The extension uses Chrome's alarm API to schedule when tabs should be reopened. When you snooze a tab:
-
-1. The tab's URL and title are saved to local storage
-2. An alarm is created for the scheduled time
-3. The tab is closed
-4. When the alarm fires, the tab is reopened at the saved URL
-
-### Persistent Scheduling
-
-The extension includes robust persistence mechanisms to ensure your snoozed tabs are never lost:
-
-- **Startup Recovery**: When the browser starts, the extension checks for any tabs that should have been opened during
-  downtime
-- **Periodic Checks**: Every 15 minutes, the extension verifies no tabs were missed
-- **Alarm Persistence**: Uses Chrome's persistent alarm API to survive browser restarts
-- **Error Recovery**: Comprehensive error handling and logging for debugging
-- **Data Validation**: Validates stored tab data to prevent corruption
-
-This means your snoozed tabs will reopen reliably even if:
-
-- Your computer is turned off and back on
-- The browser is closed and reopened
-- The extension is updated or reinstalled
-- There are temporary system issues
-
-## Files Structure
-
-- `manifest.json` - Extension configuration
-- `background.js` - Service worker handling alarms and tab management
-- `popup.html` - Extension popup interface
-- `popup.js` - Popup functionality and UI interactions
-- `icon.svg` - Extension icon (placeholder)
-
-## Permissions
-
-The extension requires these permissions:
-
-- `tabs` - To access and manage browser tabs
-- `activeTab` - To interact with the current active tab
-- `alarms` - To schedule when tabs should be reopened
-- `storage` - To save tab information temporarily
-- `notifications` - To show snooze confirmation messages
-
-## Browser Support
-
-This extension is designed for Chrome (Manifest V3) and should work on:
-
-- Google Chrome (latest)
-- Microsoft Edge (Chromium-based)
-- Other Chromium-based browsers
-
-## Contributing
-
-Feel free to contribute to this project by submitting issues or pull requests.
+Inspired by [this tweet](https://x.com/ksaitor/status/1944997383441731953). Contributions welcome — open an issue or pull request.
