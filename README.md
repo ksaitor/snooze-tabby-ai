@@ -47,8 +47,8 @@ A Chrome extension that allows you to snooze tabs for later with flexible schedu
 ### Recurring Snooze
 
 1. Click the Snooze Tabby icon
-2. In the "Recurring" section, choose the frequency (daily, monthly, yearly)
-3. Set the time you want the tab to reopen
+2. In the "Recurring" section, choose the frequency (daily, weekly, monthly, yearly)
+3. Set the schedule details. For monthly schedules, enter the day of the month (1-31); months without that day use their last day. For yearly schedules, choose the date and time in the calendar picker.
 4. Click "Set Recurring"
 5. The tab will be closed and will reopen according to your schedule
 

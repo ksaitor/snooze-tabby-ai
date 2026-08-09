@@ -19,6 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (targetTab === 'history') {
         loadSnoozeHistory()
       }
+
+      syncPopupHeight()
     })
   })
 
@@ -101,10 +103,17 @@ document.addEventListener('DOMContentLoaded', () => {
     window.close()
   })
 
-  // Handle recurring type change to show/hide weekly days selector
-  document.getElementById('recurring-type').addEventListener('change', () => {
-    const recurringType = document.getElementById('recurring-type').value
+  function getRecurringType() {
+    return document.querySelector('input[name="recurring-type"]:checked').value
+  }
+
+  // Handle recurring cadence changes to show the relevant schedule controls.
+  function updateRecurringOptions() {
+    const recurringType = getRecurringType()
     const weeklyDays = document.getElementById('weekly-days')
+    const monthlyDay = document.getElementById('monthly-day')
+    const yearlyDate = document.getElementById('yearly-date')
+    const recurringScheduleRow = document.getElementById('recurring-schedule-row')
 
     if (recurringType === 'weekly') {
       weeklyDays.style.display = 'block'
@@ -121,12 +130,22 @@ document.addEventListener('DOMContentLoaded', () => {
         cb.checked = false
       })
     }
+
+    monthlyDay.style.display = recurringType === 'monthly' ? 'flex' : 'none'
+    yearlyDate.style.display = recurringType === 'yearly' ? 'block' : 'none'
+    recurringScheduleRow.style.display = recurringType === 'yearly' ? 'none' : 'flex'
+    syncPopupHeight()
+  }
+
+  document.querySelectorAll('input[name="recurring-type"]').forEach(input => {
+    input.addEventListener('change', updateRecurringOptions)
   })
 
   // Recurring schedule
-  document.getElementById('schedule-recurring').addEventListener('click', () => {
-    const recurringType = document.getElementById('recurring-type').value
-    const recurringTime = document.getElementById('recurring-time').value
+  document.getElementById('schedule-recurring').addEventListener('click', async () => {
+    const scheduleButton = document.getElementById('schedule-recurring')
+    const recurringType = getRecurringType()
+    let recurringTime = document.getElementById('recurring-time').value
 
     // Get selected days for weekly recurring
     let selectedDays = []
@@ -140,15 +159,73 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    chrome.runtime.sendMessage({
-      action: 'snoozeTab',
-      type: 'recurring',
-      recurringType: recurringType,
-      recurringTime: recurringTime,
-      selectedDays: selectedDays,
-    })
+    let monthlyDay
+    let monthlyInterval
+    if (recurringType === 'monthly') {
+      monthlyDay = Number(document.getElementById('recurring-monthly-day').value)
+      monthlyInterval = Number(document.getElementById('recurring-monthly-interval').value)
 
-    window.close()
+      if (!Number.isInteger(monthlyDay) || monthlyDay < 1 || monthlyDay > 31) {
+        alert('Please enter a day of the month from 1 to 31')
+        return
+      }
+
+      if (!Number.isInteger(monthlyInterval) || monthlyInterval < 1 || monthlyInterval > 12) {
+        alert('Please enter a month interval from 1 to 12')
+        return
+      }
+    }
+
+    let yearlyMonth
+    let yearlyDay
+    if (recurringType === 'yearly') {
+      const yearlyDateInput = document.getElementById('recurring-yearly-date')
+      if (!yearlyDateInput.value) {
+        alert('Please select the yearly date and time')
+        return
+      }
+
+      const yearlyDate = new Date(yearlyDateInput.value)
+      if (Number.isNaN(yearlyDate.getTime())) {
+        alert('Please select a valid yearly date and time')
+        return
+      }
+
+      yearlyMonth = yearlyDate.getMonth() + 1
+      yearlyDay = yearlyDate.getDate()
+      recurringTime = `${String(yearlyDate.getHours()).padStart(2, '0')}:${String(yearlyDate.getMinutes()).padStart(2, '0')}`
+    }
+
+    scheduleButton.disabled = true
+
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+      if (!tab) {
+        throw new Error('Could not find the active tab')
+      }
+
+      const response = await chrome.runtime.sendMessage({
+        action: 'snoozeTab',
+        type: 'recurring',
+        tab: tab,
+        recurringType: recurringType,
+        recurringTime: recurringTime,
+        selectedDays: selectedDays,
+        monthlyDay: monthlyDay,
+        monthlyInterval: monthlyInterval,
+        yearlyMonth: yearlyMonth,
+        yearlyDay: yearlyDay,
+      })
+
+      if (!response?.success) {
+        throw new Error(response?.error || 'Failed to schedule recurring tab')
+      }
+
+      window.close()
+    } catch (error) {
+      alert(error.message || 'Failed to schedule recurring tab')
+      scheduleButton.disabled = false
+    }
   })
 
   // Set minimum date to now
@@ -160,6 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const defaultDate = new Date(Date.now() + 60 * 60 * 1000)
   defaultDate.setMinutes(defaultDate.getMinutes() - defaultDate.getTimezoneOffset())
   document.getElementById('custom-date').value = defaultDate.toISOString().slice(0, 16)
+  document.getElementById('recurring-yearly-date').value = defaultDate.toISOString().slice(0, 16)
 
   // Handle keyboard shortcuts display based on OS
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
@@ -188,13 +266,37 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('import-file').click()
   })
   document.getElementById('import-file').addEventListener('change', importHistory)
+
+  syncPopupHeight()
 })
+
+// Chrome action popups measure their initial document height. Re-measure after
+// expanding controls so the popup grows with its content instead of scrolling.
+function syncPopupHeight() {
+  if (!document.documentElement || !document.body) return
+
+  const scheduleMeasure = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : callback => callback()
+  scheduleMeasure(() => {
+    document.documentElement.style.height = 'auto'
+    document.body.style.height = 'auto'
+
+    const contentHeight = document.body.scrollHeight
+    document.documentElement.style.height = `${contentHeight}px`
+    document.body.style.height = `${contentHeight}px`
+  })
+}
 
 // Load snooze history
 function loadSnoozeHistory() {
   chrome.storage.local.get(null, result => {
     const snoozeItems = Object.keys(result)
-      .filter(key => key.startsWith('snooze-'))
+      .filter(
+        key =>
+          key.startsWith('snooze-') &&
+          result[key] &&
+          typeof result[key].url === 'string' &&
+          Number.isFinite(result[key].scheduledFor)
+      )
       .map(key => ({ key, ...result[key] }))
       .sort((a, b) => a.scheduledFor - b.scheduledFor)
 
@@ -222,20 +324,25 @@ function loadSnoozeHistory() {
           removeSnoozeItem(key)
         })
       })
+
     }
+
+    syncPopupHeight()
   })
 }
 
 // Create HTML for history item
 function createHistoryItem(item) {
   const timeUntil = getTimeUntilReopen(item.scheduledFor)
-  const truncatedTitle = item.title.length > 40 ? item.title.substring(0, 40) + '...' : item.title
+  const title = item.title || item.url || 'Untitled tab'
+  const truncatedTitle = title.length > 40 ? title.substring(0, 40) + '...' : title
   const truncatedUrl = item.url.length > 50 ? item.url.substring(0, 50) + '...' : item.url
 
   return `
     <div class="history-item">
       <div class="history-item-header">
         <div class="history-item-title" data-url="${escapeHtml(item.url)}">${escapeHtml(truncatedTitle)}</div>
+        ${item.recurring ? '<span class="recurring-badge">Recurring</span>' : ''}
         <button class="remove-btn" data-key="${escapeHtml(item.key)}">×</button>
       </div>
       <div class="history-item-url">${escapeHtml(truncatedUrl)}</div>
@@ -247,25 +354,36 @@ function createHistoryItem(item) {
           : ''
       }</div>
       ${
-        item.recurring
-          ? `<div class="history-item-recurring">Recurring ${escapeHtml(item.recurringType)}${
-              item.selectedDays && item.recurringType === 'weekly'
-                ? ` (${item.selectedDays
-                    .map(day => {
-                      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-                      return dayNames[day]
-                    })
-                    .sort((a, b) => {
-                      const order = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-                      return order.indexOf(a) - order.indexOf(b)
-                    })
-                    .join(', ')})`
-                : ''
-            }</div>`
-          : ''
+        item.recurring ? `<div class="history-item-recurring">${getRecurringDescription(item)}</div>` : ''
       }
     </div>
   `
+}
+
+function getRecurringDescription(item) {
+  const type = item.recurringType || 'recurring'
+  const time = item.recurringTime ? ` at ${item.recurringTime}` : ''
+
+  if (type === 'weekly' && item.selectedDays?.length) {
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    const order = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    const selectedDayNames = item.selectedDays
+      .map(day => dayNames[day])
+      .sort((a, b) => order.indexOf(a) - order.indexOf(b))
+      .join(', ')
+    return `Weekly · ${selectedDayNames}${time}`
+  }
+
+  if (type === 'monthly' && item.monthlyDay) {
+    const interval = item.monthlyInterval && item.monthlyInterval > 1 ? ` every ${item.monthlyInterval} months` : ''
+    return `Monthly${interval} · day ${item.monthlyDay}${time}`
+  }
+
+  if (type === 'yearly' && item.yearlyMonth && item.yearlyDay) {
+    return `Yearly · ${item.yearlyMonth}/${item.yearlyDay}${time}`
+  }
+
+  return `${type.charAt(0).toUpperCase()}${type.slice(1)}${time}`
 }
 
 // Escape HTML to prevent XSS
